@@ -7,10 +7,10 @@ import pandas as pd
 import numpy as np
 import joblib
 from sklearn.metrics.pairwise import cosine_similarity
-import warnings
-warnings.filterwarnings("ignore")
 
+# ======================================================================
 # 1. KONFIGURASI HALAMAN BROWSER
+# ======================================================================
 st.set_page_config(
     page_title="GovTech Analytics - Bansos",
     page_icon="🏛️",
@@ -18,7 +18,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ======================================================================
 # 2. INJEKSI KUSTOM CSS (Auto-Adaptive Theme System)
+# ======================================================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600;700&display=swap');
@@ -117,7 +119,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ======================================================================
 # 3. LOAD ASSET MODEL
+# ======================================================================
 @st.cache_resource
 def load_assets():
     model_scaler = joblib.load('scaler_bansos.pkl')
@@ -132,7 +136,9 @@ except Exception as e:
     st.error("Gagal memuat file konfigurasi model backend.")
     st.stop()
 
+# ======================================================================
 # 4. SIDEBAR COMPONENTS
+# ======================================================================
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; color: #d4af37; font-size: 3.5rem; margin-bottom:0;'>🏛️</h1>", unsafe_allow_html=True)
     st.markdown("<h3 class='sidebar-title'>GovTech Engine</h3>", unsafe_allow_html=True)
@@ -143,7 +149,9 @@ with st.sidebar:
     st.markdown("📂 **Basis Data Baseline:**")
     st.code("IFLS-5 (RAND Corp)")
 
+# ======================================================================
 # 5. HERO SECTION UTAMA
+# ======================================================================
 st.markdown("""
     <div class="hero-container">
         <h1 class="hero-title">🏛️ Analytics Dashboard & Recommendation System</h1>
@@ -151,7 +159,9 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# ======================================================================
 # 6. PEMBAGIAN LAYOUT KOLOM UTAMA
+# ======================================================================
 left_column, right_column = st.columns([1.1, 1.3], gap="large")
 
 with left_column:
@@ -177,20 +187,27 @@ with left_column:
         sumber_air = 1 if "PDAM" in sumber_air_label else 0
         
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        btn_click = st.button("PROSES ENGINE REKOMENDASI")
+        box_btn = st.container()
+        with box_btn:
+            btn_click = st.form_submit_button("PROSES ENGINE REKOMENDASI") if 'in_form' in locals() else st.button("PROSES ENGINE REKOMENDASI")
 
-# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT DENGAN PENJELASAN LOGIS
+# ======================================================================
+# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT (BAGIAN YANG DIPERBAIKI)
+# ======================================================================
 with right_column:
     st.markdown("### 📊 Hasil Komputasi Kelayakan")
     
     if btn_click:
+        # Pipeline Data Terstruktur
         input_df = pd.DataFrame([[is_anak, is_lansia, jml_anggota, total_pengeluaran, jenis_lantai, sumber_air]], columns=features)
         input_scaled = model_scaler.transform(input_df)
         
+        # Inversi Nilai Indikator (Kemiskinan = Nilai Skala Tinggi)
         input_scaled[0, 3] = 1 - input_scaled[0, 3]
         input_scaled[0, 4] = 1 - input_scaled[0, 4]
         input_scaled[0, 5] = 1 - input_scaled[0, 5]
         
+        # Hitung Kemiripan Awal
         scores = cosine_similarity(input_scaled, program_vectors)
         
         results = []
@@ -200,68 +217,71 @@ with right_column:
                 'score': round(scores[0][i] * 100, 2)
             })
             
-        # Variabel penampung simpulan akhir
+        # Variabel penampung laporan akhir
         program_diterima = []
         program_ditolak = []
+        
+        # Threshold Batas Finansial Mampu
+        BATAS_MAMPU_GLOBAL = 5000000 
             
-        # Proses Filter Hukum & Penentuan Narasi Alasan Kustom
         for res in results:
             alasan = ""
             desc = ""
             
-            # --- ATURAN KIP ---
-            if res['program'] == 'KIP':
-                desc = "Kompensasi tunai khusus alokasi biaya keberlanjutan sekolah anak."
-                if is_anak == 0:
-                    res['score'] = 0.0
-                    alasan = "❌ **Diskualifikasi Mutlak**: Regulasi kementerian menetapkan program KIP hanya diperuntukkan bagi keluarga yang memiliki anak usia sekolah aktif (6-18 tahun)."
-                    program_ditolak.append("KIP (Tidak ada komponen anak sekolah)")
-                elif res['score'] >= 80:
-                    alasan = f"🔹 **Diterima (Prioritas Utama)**: Rumah tangga memiliki {is_anak} anak sekolah dan kondisi ekonomi berada di batas bawah populasi, sangat membutuhkan subsidi biaya pendidikan."
-                    program_diterima.append("KIP")
-                else:
-                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen anak sekolah, namun tingkat pengeluaran bulanan dinilai masih cukup mampu mandiri dibandingkan target klaster miskin ekstrem."
-                    program_diterima.append("KIP (Cadangan)")
-            
-            # --- ATURAN PKH ---
+            if res['program'] == 'BPNT':
+                desc = "Fokus penjaminan pangan pokok sembako keluarga pra-sejahtera."
             elif res['program'] == 'PKH':
                 desc = "Bantuan bersyarat untuk klaster pendidikan, kesehatan anak, dan kesejahteraan lansia."
-                if is_anak == 0 and is_lansia == 0:
-                    res['score'] = 0.0
-                    alasan = "❌ **Diskualifikasi Mutlak**: Aturan hukum PKH mewajibkan adanya minimal salah satu komponen sensitif, yaitu anak usia sekolah atau anggota keluarga lanjut usia."
-                    program_ditolak.append("PKH (Tidak memiliki komponen anak/lansia)")
-                elif res['score'] >= 80:
-                    alasan = f"🔹 **Diterima (Prioritas Utama)**: Kondisi sosial sangat mendesak dengan adanya komponen tanggungan ({is_anak} anak, {is_lansia} lansia) dikombinasikan dengan keterbatasan finansial dan fasilitas rumah."
-                    program_diterima.append("PKH")
-                else:
-                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen bersyarat yang sah, namun indeks kemiskinan gabungan (ekonomi & rumah) belum masuk dalam zona prioritas utama."
-                    program_diterima.append("PKH (Cadangan)")
+            elif res['program'] == 'KIP':
+                desc = "Kompensasi tunai khusus alokasi biaya keberlanjutan sekolah anak."
+
+            # LAYER 1: GLOBAL FINANCIAL HARD FILTER
+            if total_pengeluaran >= BATAS_MAMPU_GLOBAL:
+                res['score'] = 0.0
+                alasan = f"❌ **Diskualifikasi Finansial**: Estimasi pengeluaran bulanan keluarga Anda (Rp {total_pengeluaran:,}) telah melampaui batas ambang kemiskinan murni kementerian (*poverty threshold*). Rumah tangga dikategorikan sebagai Keluarga Sejahtera/Mampu."
+                program_ditolak.append(f"{res['program']} (Melebihi batas kemampuan finansial)")
             
-            # --- ATURAN BPNT (REVISI FIX) ---
-            elif res['program'] == 'BPNT':
-                desc = "Fokus penjaminan pangan pokok sembako keluarga pra-sejahtera."
+            # LAYER 2: FILTER REGULASI SPESIFIK PROGRAM
+            else:
+                # --- ATURAN KIP ---
+                if res['program'] == 'KIP':
+                    if is_anak == 0:
+                        res['score'] = 0.0
+                        alasan = "❌ **Diskualifikasi Mutlak**: Regulasi menetapkan program KIP hanya diperuntukkan bagi keluarga yang memiliki anak usia sekolah aktif (6-18 tahun)."
+                        program_ditolak.append("KIP (Tidak ada komponen anak sekolah)")
+                    elif res['score'] >= 80:
+                        alasan = f"🔹 **Diterima (Prioritas Utama)**: Rumah tangga memiliki {is_anak} anak sekolah dan kondisi ekonomi berada di batas bawah populasi."
+                        program_diterima.append("KIP")
+                    else:
+                        alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen anak sekolah, namun tingkat pengeluaran bulanan dinilai masih cukup mampu mandiri."
+                        program_diterima.append("KIP (Cadangan)")
                 
-                # 1. Jalankan Aturan Penalti Finansial Terlebih Dahulu
-                if total_pengeluaran > 3000000 and jenis_lantai == 1 and sumber_air == 1:
-                    res['score'] = round(res['score'] * 0.5, 2)
-                elif total_pengeluaran > 5000000:
-                    res['score'] = round(res['score'] * 0.2, 2)
+                # --- ATURAN PKH ---
+                elif res['program'] == 'PKH':
+                    if is_anak == 0 and is_lansia == 0:
+                        res['score'] = 0.0
+                        alasan = "❌ **Diskualifikasi Mutlak**: Aturan hukum PKH mewajibkan adanya minimal salah satu komponen sensitif (anak sekolah/lansia)."
+                        program_ditolak.append("PKH (Tidak memiliki komponen anak/lansia)")
+                    elif res['score'] >= 80:
+                        alasan = f"🔹 **Diterima (Prioritas Utama)**: Kondisi sosial sangat mendesak dengan adanya komponen tanggungan ({is_anak} anak, {is_lansia} lansia)."
+                        program_diterima.append("PKH")
+                    else:
+                        alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen bersyarat yang sah, namun indeks kemiskinan gabungan belum masuk zona prioritas."
+                        program_diterima.append("PKH (Cadangan)")
                 
-                if total_pengeluaran > 7500000:
-                    res['score'] = 0.0
+                # --- ATURAN BPNT ---
+                elif res['program'] == 'BPNT':
+                    if total_pengeluaran > 3000000 and jenis_lantai == 1 and sumber_air == 1:
+                        res['score'] = round(res['score'] * 0.5, 2)
+                    
+                    if res['score'] >= 80:
+                        alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran rendah dan keterbatasan fasilitas fisik rumah menempatkan keluarga ini sebagai kelompok prioritas tinggi."
+                        program_diterima.append("BPNT")
+                    else:
+                        alasan = "🔸 **Dipertimbangkan (Cadangan)**: Profil finansial berada di zona batas (*borderline*). Mengalami penurunan prioritas skor karena memiliki daya beli mandiri yang mumpuni."
+                        program_diterima.append("BPNT (Cadangan)")
 
-                # 2. Tentukan Justifikasi Alasan Berdasarkan Skor Akhir Penalti
-                if res['score'] == 0.0:
-                    alasan = f"❌ **Diskualifikasi Mutlak**: Estimasi pengeluaran bulanan (Rp {total_pengeluaran:,}) telah melampaui batas ambang batas kemiskinan murni (*poverty threshold*) untuk bantuan pangan."
-                    program_ditolak.append("BPNT (Melebihi batas pengeluaran finansial)")
-                elif res['score'] >= 80:
-                    alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran rendah dan keterbatasan fasilitas fisik rumah menempatkan keluarga ini sebagai kelompok prioritas tinggi."
-                    program_diterima.append("BPNT")
-                else:
-                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Profil finansial berada di zona batas (*borderline*). Mengalami penurunan prioritas skor karena dinilai memiliki daya beli mandiri yang cukup mumpuni."
-                    program_diterima.append("BPNT (Cadangan)")
-
-            # --- RENDER CARD DAN BADGE WARNA ---
+            # Penentuan Klasifikasi Badge Warna
             if res['score'] >= 80:
                 badge_style = '<span class="badge badge-prio">Prioritas Utama</span>'
             elif res['score'] > 0:
@@ -269,6 +289,7 @@ with right_column:
             else:
                 badge_style = '<span class="badge badge-gagal">Sistem Diskualifikasi</span>'
             
+            # Cetak Kartu Kustom ke Layar Dashboard
             st.markdown(f"""
                 <div class="custom-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -286,7 +307,9 @@ with right_column:
             st.write(f"Match Core Score: **{res['score']}%**")
             st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
             
+        # ======================================================================
         # 8. SECTION KESIMPULAN AKHIR INTEGRATIF
+        # ======================================================================
         st.markdown("---")
         st.markdown("### 📌 Ringkasan & Rekomendasi Akhir")
         
