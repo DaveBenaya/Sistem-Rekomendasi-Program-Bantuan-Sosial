@@ -195,7 +195,10 @@ with right_column:
         
         results = []
         for i, prog_name in enumerate(df_programs['program']):
-            results.append({'program': prog_name, 'score': round(scores[0][i] * 100, 2)})
+            results.append({
+                'program': prog_name,
+                'score': round(scores[0][i] * 100, 2)
+            })
             
         # Variabel penampung simpulan akhir
         program_diterima = []
@@ -204,9 +207,11 @@ with right_column:
         # Proses Filter Hukum & Penentuan Narasi Alasan Kustom
         for res in results:
             alasan = ""
+            desc = ""
             
-            # ATURAN KIP
+            # --- ATURAN KIP ---
             if res['program'] == 'KIP':
+                desc = "Kompensasi tunai khusus alokasi biaya keberlanjutan sekolah anak."
                 if is_anak == 0:
                     res['score'] = 0.0
                     alasan = "❌ **Diskualifikasi Mutlak**: Regulasi kementerian menetapkan program KIP hanya diperuntukkan bagi keluarga yang memiliki anak usia sekolah aktif (6-18 tahun)."
@@ -218,8 +223,9 @@ with right_column:
                     alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen anak sekolah, namun tingkat pengeluaran bulanan dinilai masih cukup mampu mandiri dibandingkan target klaster miskin ekstrem."
                     program_diterima.append("KIP (Cadangan)")
             
-            # ATURAN PKH
+            # --- ATURAN PKH ---
             elif res['program'] == 'PKH':
+                desc = "Bantuan bersyarat untuk klaster pendidikan, kesehatan anak, dan kesejahteraan lansia."
                 if is_anak == 0 and is_lansia == 0:
                     res['score'] = 0.0
                     alasan = "❌ **Diskualifikasi Mutlak**: Aturan hukum PKH mewajibkan adanya minimal salah satu komponen sensitif, yaitu anak usia sekolah atau anggota keluarga lanjut usia."
@@ -231,16 +237,31 @@ with right_column:
                     alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen bersyarat yang sah, namun indeks kemiskinan gabungan (ekonomi & rumah) belum masuk dalam zona prioritas utama."
                     program_diterima.append("PKH (Cadangan)")
             
-            # ATURAN BPNT
+            # --- ATURAN BPNT (REVISI FIX) ---
             elif res['program'] == 'BPNT':
-                if res['score'] >= 80:
-                    alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran dan buruknya fasilitas fisik rumah (lantai/air) menempatkan keluarga ini sebagai prioritas tinggi penerima jaminan pangan pokok."
+                desc = "Fokus penjaminan pangan pokok sembako keluarga pra-sejahtera."
+                
+                # 1. Jalankan Aturan Penalti Finansial Terlebih Dahulu
+                if total_pengeluaran > 3000000 and jenis_lantai == 1 and sumber_air == 1:
+                    res['score'] = round(res['score'] * 0.5, 2)
+                elif total_pengeluaran > 5000000:
+                    res['score'] = round(res['score'] * 0.2, 2)
+                
+                if total_pengeluaran > 7500000:
+                    res['score'] = 0.0
+
+                # 2. Tentukan Justifikasi Alasan Berdasarkan Skor Akhir Penalti
+                if res['score'] == 0.0:
+                    alasan = f"❌ **Diskualifikasi Mutlak**: Estimasi pengeluaran bulanan (Rp {total_pengeluaran:,}) telah melampaui batas ambang batas kemiskinan murni (*poverty threshold*) untuk bantuan pangan."
+                    program_ditolak.append("BPNT (Melebihi batas pengeluaran finansial)")
+                elif res['score'] >= 80:
+                    alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran rendah dan keterbatasan fasilitas fisik rumah menempatkan keluarga ini sebagai kelompok prioritas tinggi."
                     program_diterima.append("BPNT")
                 else:
-                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Kondisi ekonomi berada di zona tengah (ambang batas). Bantuan pangan baru akan dialokasikan jika kuota kuantum utama daerah masih tersedia."
+                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Profil finansial berada di zona batas (*borderline*). Mengalami penurunan prioritas skor karena dinilai memiliki daya beli mandiri yang cukup mumpuni."
                     program_diterima.append("BPNT (Cadangan)")
 
-            # Penentuan Desain Badge
+            # --- RENDER CARD DAN BADGE WARNA ---
             if res['score'] >= 80:
                 badge_style = '<span class="badge badge-prio">Prioritas Utama</span>'
             elif res['score'] > 0:
@@ -248,15 +269,14 @@ with right_column:
             else:
                 badge_style = '<span class="badge badge-gagal">Sistem Diskualifikasi</span>'
             
-            # Render Tampilan Kartu Hasil Per Program
             st.markdown(f"""
                 <div class="custom-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 class="card-title">Program {res['program']}</h4>
                         {badge_style}
                     </div>
-                    <p class="card-desc">{desc if 'desc' in locals() else ""}</p>
-                    <div style="font-size: 0.9rem; padding: 10px; border-radius: 6px; background: rgba(212,175,55,0.05); border-left: 3px solid #d4af37;">
+                    <p class="card-desc">{desc}</p>
+                    <div style="font-size: 0.9rem; padding: 10px; border-radius: 6px; background: rgba(212,175,55,0.05); border-left: 3px solid #d4af37; color: var(--text-main);">
                         {alasan}
                     </div>
                 </div>
@@ -264,9 +284,9 @@ with right_column:
             
             st.progress(res['score'] / 100.0)
             st.write(f"Match Core Score: **{res['score']}%**")
-            st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
             
-        # 8. SECTION KESIMPULAN AKHIR INTEGRATIF (BARU)
+        # 8. SECTION KESIMPULAN AKHIR INTEGRATIF
         st.markdown("---")
         st.markdown("### 📌 Ringkasan & Rekomendasi Akhir")
         
