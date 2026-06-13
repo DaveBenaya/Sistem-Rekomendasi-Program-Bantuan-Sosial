@@ -21,11 +21,9 @@ st.set_page_config(
 # 2. INJEKSI KUSTOM CSS (Auto-Adaptive Theme System)
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600;700&display=swap');
     
-    /* DEFINISI VARIABEL WARNA SECARA GLOBAL */
     :root {
-        /* Default: LIGHT MODE (Putih & Emas, Tulisan Gelap) */
         --bg-main: #ffffff;
         --bg-sidebar: #f8fafc;
         --text-main: #1e293b;
@@ -38,8 +36,7 @@ st.markdown("""
     
     @media (prefers-color-scheme: dark) {
         :root {
-            /* Otomatis Switch: DARK MODE (Biru Gelap Premium & Emas, Tulisan Putih) */
-            --bg-main: #1e2538; /* Biru elegan, tidak segelap navy pitch black */
+            --bg-main: #1e2538;
             --bg-sidebar: #151a26;
             --text-main: #ffffff;
             --text-muted: #94a3b8;
@@ -50,7 +47,6 @@ st.markdown("""
         }
     }
 
-    /* APLIKASI WARNA PADA UTAN CONTAINER */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         font-family: 'Inter', sans-serif;
         background-color: var(--bg-main) !important;
@@ -61,25 +57,23 @@ st.markdown("""
         border-right: 1px solid var(--border-card);
     }
     
-    /* Hero Section Component */
     .hero-container {
         background: var(--bg-card);
         padding: 2.5rem;
         border-radius: 16px;
-        border: 2px solid #d4af37; /* Tetap Aksentuasi Emas */
+        border: 2px solid #d4af37;
         box-shadow: 0 4px 20px var(--shadow-hero);
         margin-bottom: 2rem;
     }
     .hero-title { margin:0; color: var(--text-main); font-size: 2.3rem; font-weight:700; }
     .hero-subtitle { margin:8px 0 0 0; color: var(--text-muted); font-size:1.1rem; }
     
-    /* Custom Result Card Component */
     .custom-card {
         background: var(--bg-card);
         border: 1px solid var(--border-card);
         padding: 1.5rem;
         border-radius: 12px;
-        margin-bottom: 1.2rem;
+        margin-bottom: 0.5rem;
         box-shadow: 0 2px 8px var(--shadow-card);
         transition: all 0.2s ease;
     }
@@ -91,10 +85,8 @@ st.markdown("""
     .card-title { margin:0; color: var(--text-main); font-size:1.3rem; }
     .card-desc { margin: 6px 0 12px 0; color: var(--text-muted); font-size:0.9rem; }
     
-    /* Sidebar Text Header */
     .sidebar-title { text-align: center; margin-top:0; color: var(--text-main); }
     
-    /* Badge Status Pill Styling */
     .badge {
         padding: 6px 14px;
         border-radius: 20px;
@@ -107,7 +99,6 @@ st.markdown("""
     .badge-cadangan { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     .badge-gagal { background-color: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
     
-    /* Tombol Analisis Gradien Emas */
     div.stButton > button:first-child {
         background: linear-gradient(90deg, #d4af37 0%, #b45309 100%) !important;
         color: white !important;
@@ -126,7 +117,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. LOAD ASSET MODEL DENGAN CACHING
+# 3. LOAD ASSET MODEL
 @st.cache_resource
 def load_assets():
     model_scaler = joblib.load('scaler_bansos.pkl')
@@ -147,10 +138,8 @@ with st.sidebar:
     st.markdown("<h3 class='sidebar-title'>GovTech Engine</h3>", unsafe_allow_html=True)
     st.caption("Sistem Pendukung Keputusan Kelayakan Penerima Bantuan Sosial Nasional.")
     st.markdown("---")
-    
     st.markdown("💡 **Metode Sistem:**")
     st.info("Hybrid Architecture\n1. Knowledge-Based (Filter)\n2. Content-Based (Ranking)")
-    
     st.markdown("📂 **Basis Data Baseline:**")
     st.code("IFLS-5 (RAND Corp)")
 
@@ -190,7 +179,7 @@ with left_column:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         btn_click = st.button("PROSES ENGINE REKOMENDASI")
 
-# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT
+# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT DENGAN PENJELASAN LOGIS
 with right_column:
     st.markdown("### 📊 Hasil Komputasi Kelayakan")
     
@@ -208,39 +197,95 @@ with right_column:
         for i, prog_name in enumerate(df_programs['program']):
             results.append({'program': prog_name, 'score': round(scores[0][i] * 100, 2)})
             
-        for res in results:
-            if res['program'] == 'KIP' and is_anak == 0:
-                res['score'] = 0.0
-            if res['program'] == 'PKH' and (is_anak == 0 and is_lansia == 0):
-                res['score'] = 0.0
-                
-        results = sorted(results, key=lambda x: x['score'], reverse=True)
-        
-        for res in results:
-            if res['program'] == 'BPNT':
-                desc = "Fokus penjaminan pangan pokok sembako keluarga pra-sejahtera."
-                badge_style = '<span class="badge badge-prio">Prioritas Utama</span>' if res['score'] >= 80 else ('<span class="badge badge-cadangan">Prioritas Cadangan</span>' if res['score'] > 0 else '<span class="badge badge-gagal">Sistem Diskualifikasi</span>')
-            elif res['program'] == 'PKH':
-                desc = "Bantuan bersyarat untuk klaster pendidikan, kesehatan anak, dan kesejahteraan lansia."
-                badge_style = '<span class="badge badge-prio">Prioritas Utama</span>' if res['score'] >= 80 else ('<span class="badge badge-cadangan">Prioritas Cadangan</span>' if res['score'] > 0 else '<span class="badge badge-gagal">Sistem Diskualifikasi</span>')
-            else:
-                desc = "Kompensasi tunai khusus alokasi biaya keberlanjutan sekolah anak."
-                badge_style = '<span class="badge badge-prio">Prioritas Utama</span>' if res['score'] >= 80 else ('<span class="badge badge-cadangan">Prioritas Cadangan</span>' if res['score'] > 0 else '<span class="badge badge-gagal">Sistem Diskualifikasi</span>')
+        # Variabel penampung simpulan akhir
+        program_diterima = []
+        program_ditolak = []
             
-            # HTML Injeksi Kartu Kustom (Inline Color Dihapus Agar Mengikuti CSS Variables)
+        # Proses Filter Hukum & Penentuan Narasi Alasan Kustom
+        for res in results:
+            alasan = ""
+            
+            # ATURAN KIP
+            if res['program'] == 'KIP':
+                if is_anak == 0:
+                    res['score'] = 0.0
+                    alasan = "❌ **Diskualifikasi Mutlak**: Regulasi kementerian menetapkan program KIP hanya diperuntukkan bagi keluarga yang memiliki anak usia sekolah aktif (6-18 tahun)."
+                    program_ditolak.append("KIP (Tidak ada komponen anak sekolah)")
+                elif res['score'] >= 80:
+                    alasan = f"🔹 **Diterima (Prioritas Utama)**: Rumah tangga memiliki {is_anak} anak sekolah dan kondisi ekonomi berada di batas bawah populasi, sangat membutuhkan subsidi biaya pendidikan."
+                    program_diterima.append("KIP")
+                else:
+                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen anak sekolah, namun tingkat pengeluaran bulanan dinilai masih cukup mampu mandiri dibandingkan target klaster miskin ekstrem."
+                    program_diterima.append("KIP (Cadangan)")
+            
+            # ATURAN PKH
+            elif res['program'] == 'PKH':
+                if is_anak == 0 and is_lansia == 0:
+                    res['score'] = 0.0
+                    alasan = "❌ **Diskualifikasi Mutlak**: Aturan hukum PKH mewajibkan adanya minimal salah satu komponen sensitif, yaitu anak usia sekolah atau anggota keluarga lanjut usia."
+                    program_ditolak.append("PKH (Tidak memiliki komponen anak/lansia)")
+                elif res['score'] >= 80:
+                    alasan = f"🔹 **Diterima (Prioritas Utama)**: Kondisi sosial sangat mendesak dengan adanya komponen tanggungan ({is_anak} anak, {is_lansia} lansia) dikombinasikan dengan keterbatasan finansial dan fasilitas rumah."
+                    program_diterima.append("PKH")
+                else:
+                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Memiliki komponen bersyarat yang sah, namun indeks kemiskinan gabungan (ekonomi & rumah) belum masuk dalam zona prioritas utama."
+                    program_diterima.append("PKH (Cadangan)")
+            
+            # ATURAN BPNT
+            elif res['program'] == 'BPNT':
+                if res['score'] >= 80:
+                    alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran dan buruknya fasilitas fisik rumah (lantai/air) menempatkan keluarga ini sebagai prioritas tinggi penerima jaminan pangan pokok."
+                    program_diterima.append("BPNT")
+                else:
+                    alasan = "🔸 **Dipertimbangkan (Cadangan)**: Kondisi ekonomi berada di zona tengah (ambang batas). Bantuan pangan baru akan dialokasikan jika kuota kuantum utama daerah masih tersedia."
+                    program_diterima.append("BPNT (Cadangan)")
+
+            # Penentuan Desain Badge
+            if res['score'] >= 80:
+                badge_style = '<span class="badge badge-prio">Prioritas Utama</span>'
+            elif res['score'] > 0:
+                badge_style = '<span class="badge badge-cadangan">Prioritas Cadangan</span>'
+            else:
+                badge_style = '<span class="badge badge-gagal">Sistem Diskualifikasi</span>'
+            
+            # Render Tampilan Kartu Hasil Per Program
             st.markdown(f"""
                 <div class="custom-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 class="card-title">Program {res['program']}</h4>
                         {badge_style}
                     </div>
-                    <p class="card-desc">{desc}</p>
+                    <p class="card-desc">{desc if 'desc' in locals() else ""}</p>
+                    <div style="font-size: 0.9rem; padding: 10px; border-radius: 6px; background: rgba(212,175,55,0.05); border-left: 3px solid #d4af37;">
+                        {alasan}
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
             st.progress(res['score'] / 100.0)
             st.write(f"Match Core Score: **{res['score']}%**")
-            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+            
+        # 8. SECTION KESIMPULAN AKHIR INTEGRATIF (BARU)
+        st.markdown("---")
+        st.markdown("### 📌 Ringkasan & Rekomendasi Akhir")
+        
+        with st.container(border=True):
+            st.write("**Bantuan yang BISA diajukan (Prioritas):**")
+            if program_diterima:
+                for p in program_diterima:
+                    st.markdown(f"✅ `{p}`")
+            else:
+                st.markdown("ℹ️ *Tidak ada bantuan prioritas yang cocok dengan profil saat ini.*")
+                
+            st.write("**Bantuan yang TIDAK BISA diterima:**")
+            if program_ditolak:
+                for p in program_ditolak:
+                    st.markdown(f"🚫 `{p}`")
+            else:
+                st.markdown("ℹ️ *Semua program lolos kriteria penyaringan regulasi hukum dasar.*")
+                
+            st.caption("💡 *Catatan Teknis: Rekomendasi disusun secara otomatis oleh SPK Hybrid menggunakan basis data baseline makro IFLS-5 (RAND Corporation) berstandar nasional.*")
             
     else:
         st.info("💡 Menunggu Eksekusi: Silakan sesuaikan data keluarga di panel kiri, kemudian klik tombol 'PROSES ENGINE REKOMENDASI' untuk memunculkan matriks peringkat kelayakan bansos.")
