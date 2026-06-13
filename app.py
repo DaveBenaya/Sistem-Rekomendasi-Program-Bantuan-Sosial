@@ -1,5 +1,4 @@
 import warnings
-# Menyembunyikan semua peringatan versi agar terminal bersih saat dijalankan
 warnings.filterwarnings("ignore")
 
 import streamlit as st
@@ -8,9 +7,7 @@ import numpy as np
 import joblib
 from sklearn.metrics.pairwise import cosine_similarity
 
-# ======================================================================
 # 1. KONFIGURASI HALAMAN BROWSER
-# ======================================================================
 st.set_page_config(
     page_title="GovTech Analytics - Bansos",
     page_icon="🏛️",
@@ -18,9 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ======================================================================
 # 2. INJEKSI KUSTOM CSS (Auto-Adaptive Theme System)
-# ======================================================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600;700&display=swap');
@@ -119,9 +114,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ======================================================================
 # 3. LOAD ASSET MODEL
-# ======================================================================
 @st.cache_resource
 def load_assets():
     model_scaler = joblib.load('scaler_bansos.pkl')
@@ -136,9 +129,7 @@ except Exception as e:
     st.error("Gagal memuat file konfigurasi model backend.")
     st.stop()
 
-# ======================================================================
 # 4. SIDEBAR COMPONENTS
-# ======================================================================
 with st.sidebar:
     st.markdown("<h1 style='text-align: center; color: #d4af37; font-size: 3.5rem; margin-bottom:0;'>🏛️</h1>", unsafe_allow_html=True)
     st.markdown("<h3 class='sidebar-title'>GovTech Engine</h3>", unsafe_allow_html=True)
@@ -149,9 +140,7 @@ with st.sidebar:
     st.markdown("📂 **Basis Data Baseline:**")
     st.code("IFLS-5 (RAND Corp)")
 
-# ======================================================================
 # 5. HERO SECTION UTAMA
-# ======================================================================
 st.markdown("""
     <div class="hero-container">
         <h1 class="hero-title">🏛️ Analytics Dashboard & Recommendation System</h1>
@@ -159,9 +148,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ======================================================================
 # 6. PEMBAGIAN LAYOUT KOLOM UTAMA
-# ======================================================================
 left_column, right_column = st.columns([1.1, 1.3], gap="large")
 
 with left_column:
@@ -187,19 +174,19 @@ with left_column:
         sumber_air = 1 if "PDAM" in sumber_air_label else 0
         
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        box_btn = st.container()
-        with box_btn:
-            btn_click = st.form_submit_button("PROSES ENGINE REKOMENDASI") if 'in_form' in locals() else st.button("PROSES ENGINE REKOMENDASI")
+        btn_click = st.button("PROSES ENGINE REKOMENDASI")
 
-# ======================================================================
-# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT (BAGIAN YANG DIPERBAIKI)
-# ======================================================================
+# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT
 with right_column:
     st.markdown("### 📊 Hasil Komputasi Kelayakan")
     
     if btn_click:
         # Pipeline Data Terstruktur
         input_df = pd.DataFrame([[is_anak, is_lansia, jml_anggota, total_pengeluaran, jenis_lantai, sumber_air]], columns=features)
+        
+        # SINKRONISASI PREPROCESSING: Lakukan log transformasi yang sama seperti training populasi
+        input_df['total_pengeluaran'] = np.log1p(input_df['total_pengeluaran'])
+        
         input_scaled = model_scaler.transform(input_df)
         
         # Inversi Nilai Indikator (Kemiskinan = Nilai Skala Tinggi)
@@ -207,7 +194,7 @@ with right_column:
         input_scaled[0, 4] = 1 - input_scaled[0, 4]
         input_scaled[0, 5] = 1 - input_scaled[0, 5]
         
-        # Hitung Kemiripan Awal
+        # Hitung Kemiripan Cosine Similarity
         scores = cosine_similarity(input_scaled, program_vectors)
         
         results = []
@@ -217,12 +204,11 @@ with right_column:
                 'score': round(scores[0][i] * 100, 2)
             })
             
-        # Variabel penampung laporan akhir
         program_diterima = []
         program_ditolak = []
         
-        # Threshold Batas Finansial Mampu
-        BATAS_MAMPU_GLOBAL = 5000000 
+        # Threshold Batas Finansial Mampu Resmi SPK Hybrid
+        BATAS_MAMPU_GLOBAL = 4500000 
             
         for res in results:
             alasan = ""
@@ -249,7 +235,7 @@ with right_column:
                         res['score'] = 0.0
                         alasan = "❌ **Diskualifikasi Mutlak**: Regulasi menetapkan program KIP hanya diperuntukkan bagi keluarga yang memiliki anak usia sekolah aktif (6-18 tahun)."
                         program_ditolak.append("KIP (Tidak ada komponen anak sekolah)")
-                    elif res['score'] >= 80:
+                    elif res['score'] >= 75:
                         alasan = f"🔹 **Diterima (Prioritas Utama)**: Rumah tangga memiliki {is_anak} anak sekolah dan kondisi ekonomi berada di batas bawah populasi."
                         program_diterima.append("KIP")
                     else:
@@ -262,7 +248,7 @@ with right_column:
                         res['score'] = 0.0
                         alasan = "❌ **Diskualifikasi Mutlak**: Aturan hukum PKH mewajibkan adanya minimal salah satu komponen sensitif (anak sekolah/lansia)."
                         program_ditolak.append("PKH (Tidak memiliki komponen anak/lansia)")
-                    elif res['score'] >= 80:
+                    elif res['score'] >= 75:
                         alasan = f"🔹 **Diterima (Prioritas Utama)**: Kondisi sosial sangat mendesak dengan adanya komponen tanggungan ({is_anak} anak, {is_lansia} lansia)."
                         program_diterima.append("PKH")
                     else:
@@ -271,10 +257,7 @@ with right_column:
                 
                 # --- ATURAN BPNT ---
                 elif res['program'] == 'BPNT':
-                    if total_pengeluaran > 3000000 and jenis_lantai == 1 and sumber_air == 1:
-                        res['score'] = round(res['score'] * 0.5, 2)
-                    
-                    if res['score'] >= 80:
+                    if res['score'] >= 75:
                         alasan = "🔹 **Diterima (Prioritas Utama)**: Indikator ekonomi total pengeluaran rendah dan keterbatasan fasilitas fisik rumah menempatkan keluarga ini sebagai kelompok prioritas tinggi."
                         program_diterima.append("BPNT")
                     else:
@@ -282,7 +265,7 @@ with right_column:
                         program_diterima.append("BPNT (Cadangan)")
 
             # Penentuan Klasifikasi Badge Warna
-            if res['score'] >= 80:
+            if res['score'] >= 75:
                 badge_style = '<span class="badge badge-prio">Prioritas Utama</span>'
             elif res['score'] > 0:
                 badge_style = '<span class="badge badge-cadangan">Prioritas Cadangan</span>'
