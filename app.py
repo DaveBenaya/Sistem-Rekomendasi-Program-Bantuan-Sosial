@@ -18,50 +18,83 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. INJEKSI KUSTOM CSS (Tema Putih, Abu-abu Ringan, dan Aksen Emas Bangsawan)
+# 2. INJEKSI KUSTOM CSS (Auto-Adaptive Theme System)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     
+    /* DEFINISI VARIABEL WARNA SECARA GLOBAL */
+    :root {
+        /* Default: LIGHT MODE (Putih & Emas, Tulisan Gelap) */
+        --bg-main: #ffffff;
+        --bg-sidebar: #f8fafc;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --bg-card: #ffffff;
+        --border-card: #e2e8f0;
+        --shadow-hero: rgba(212, 175, 55, 0.12);
+        --shadow-card: rgba(0, 0, 0, 0.04);
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Otomatis Switch: DARK MODE (Biru Gelap Premium & Emas, Tulisan Putih) */
+            --bg-main: #1e2538; /* Biru elegan, tidak segelap navy pitch black */
+            --bg-sidebar: #151a26;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --bg-card: #283149;
+            --border-card: #3b4766;
+            --shadow-hero: rgba(212, 175, 55, 0.25);
+            --shadow-card: rgba(0, 0, 0, 0.2);
+        }
+    }
+
+    /* APLIKASI WARNA PADA UTAN CONTAINER */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         font-family: 'Inter', sans-serif;
-        background-color: #ffffff !important;
-        color: #1e293b !important;
+        background-color: var(--bg-main) !important;
     }
     
-    /* Mengubah warna Sidebar menjadi abu-abu terang premium */
     [data-testid="stSidebar"] {
-        background-color: #f8fafc !important;
-        border-right: 1px solid #e2e8f0;
+        background-color: var(--bg-sidebar) !important;
+        border-right: 1px solid var(--border-card);
     }
     
-    /* Hero Section: Putih Bersih dengan Border Emas */
+    /* Hero Section Component */
     .hero-container {
-        background: #ffffff;
+        background: var(--bg-card);
         padding: 2.5rem;
         border-radius: 16px;
-        border: 2px solid #d4af37; /* Warna Emas */
-        box-shadow: 0 4px 20px rgba(212, 175, 55, 0.12);
+        border: 2px solid #d4af37; /* Tetap Aksentuasi Emas */
+        box-shadow: 0 4px 20px var(--shadow-hero);
         margin-bottom: 2rem;
     }
+    .hero-title { margin:0; color: var(--text-main); font-size: 2.3rem; font-weight:700; }
+    .hero-subtitle { margin:8px 0 0 0; color: var(--text-muted); font-size:1.1rem; }
     
-    /* Kartu Hasil: Putih dengan Hover Bayangan Emas */
+    /* Custom Result Card Component */
     .custom-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-card);
+        border: 1px solid var(--border-card);
         padding: 1.5rem;
         border-radius: 12px;
         margin-bottom: 1.2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 2px 8px var(--shadow-card);
         transition: all 0.2s ease;
     }
     .custom-card:hover {
         transform: translateY(-2px);
         border-color: #d4af37;
-        box-shadow: 0 6px 16px rgba(212, 175, 55, 0.2);
+        box-shadow: 0 6px 16px var(--shadow-hero);
     }
+    .card-title { margin:0; color: var(--text-main); font-size:1.3rem; }
+    .card-desc { margin: 6px 0 12px 0; color: var(--text-muted); font-size:0.9rem; }
     
-    /* Badge Status Kustom */
+    /* Sidebar Text Header */
+    .sidebar-title { text-align: center; margin-top:0; color: var(--text-main); }
+    
+    /* Badge Status Pill Styling */
     .badge {
         padding: 6px 14px;
         border-radius: 20px;
@@ -74,7 +107,7 @@ st.markdown("""
     .badge-cadangan { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     .badge-gagal { background-color: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
     
-    /* Tombol Analisis Gradien Emas Premium */
+    /* Tombol Analisis Gradien Emas */
     div.stButton > button:first-child {
         background: linear-gradient(90deg, #d4af37 0%, #b45309 100%) !important;
         color: white !important;
@@ -93,7 +126,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. LOAD ASSET MODEL MODEL DENGAN CACHING
+# 3. LOAD ASSET MODEL DENGAN CACHING
 @st.cache_resource
 def load_assets():
     model_scaler = joblib.load('scaler_bansos.pkl')
@@ -108,11 +141,10 @@ except Exception as e:
     st.error("Gagal memuat file konfigurasi model backend.")
     st.stop()
 
-# 4. SIDEBAR (Solusi Ikon Pecah: Menggunakan HTML Div Emas Stabil)
+# 4. SIDEBAR COMPONENTS
 with st.sidebar:
-    # Mengganti st.image yang rusak dengan visualisasi teks/emoji emas rapi
     st.markdown("<h1 style='text-align: center; color: #d4af37; font-size: 3.5rem; margin-bottom:0;'>🏛️</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; margin-top:0; color: #1e293b;'>GovTech Engine</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='sidebar-title'>GovTech Engine</h3>", unsafe_allow_html=True)
     st.caption("Sistem Pendukung Keputusan Kelayakan Penerima Bantuan Sosial Nasional.")
     st.markdown("---")
     
@@ -125,8 +157,8 @@ with st.sidebar:
 # 5. HERO SECTION UTAMA
 st.markdown("""
     <div class="hero-container">
-        <h1 style='margin:0; color:#1e293b; font-size: 2.3rem; font-weight:700;'>🏛️ Analytics Dashboard & Recommendation System</h1>
-        <p style='margin:8px 0 0 0; color:#64748b; font-size:1.1rem;'>Optimasi Akurasi Alokasi Bantuan Sosial Berbasis Karakteristik Rumah Tangga Mikro</p>
+        <h1 class="hero-title">🏛️ Analytics Dashboard & Recommendation System</h1>
+        <p class="hero-subtitle">Optimasi Akurasi Alokasi Bantuan Sosial Berbasis Karakteristik Rumah Tangga Mikro</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -158,7 +190,7 @@ with left_column:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         btn_click = st.button("PROSES ENGINE REKOMENDASI")
 
-# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT (LIGHT THEME)
+# 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT
 with right_column:
     st.markdown("### 📊 Hasil Komputasi Kelayakan")
     
@@ -195,13 +227,14 @@ with right_column:
                 desc = "Kompensasi tunai khusus alokasi biaya keberlanjutan sekolah anak."
                 badge_style = '<span class="badge badge-prio">Prioritas Utama</span>' if res['score'] >= 80 else ('<span class="badge badge-cadangan">Prioritas Cadangan</span>' if res['score'] > 0 else '<span class="badge badge-gagal">Sistem Diskualifikasi</span>')
             
+            # HTML Injeksi Kartu Kustom (Inline Color Dihapus Agar Mengikuti CSS Variables)
             st.markdown(f"""
                 <div class="custom-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="margin:0; color:#1e293b; font-size:1.3rem;">Program {res['program']}</h4>
+                        <h4 class="card-title">Program {res['program']}</h4>
                         {badge_style}
                     </div>
-                    <p style="margin: 6px 0 12px 0; color:#64748b; font-size:0.9rem;">{desc}</p>
+                    <p class="card-desc">{desc}</p>
                 </div>
             """, unsafe_allow_html=True)
             
