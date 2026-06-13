@@ -164,8 +164,14 @@ with left_column:
         with col_slot2:
             is_lansia = st.number_input("Anggota Lansia (>60 Thn)", min_value=0, max_value=10, value=0)
             
+        # 1. Kotak Input Utama
         total_pengeluaran = st.number_input("Total Pengeluaran Bulanan (Rp)", min_value=0, value=1200000, step=100000)
         
+        # 2. LIVE PREVIEW ANTI-TYPO (Menampilkan format titik secara otomatis saat diubah)
+        formatted_rupiah = f"Rp {total_pengeluaran:,}".replace(",", ".")
+        st.markdown(f"<p style='color: #d4af37; font-size: 0.9rem; margin-top: -10px; font-weight: 600;'>Format Terbaca: {formatted_rupiah}</p>", unsafe_allow_html=True)
+        
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         st.markdown("**Kondisi Infrastruktur Fisik Rumah:**")
         jenis_lantai_label = st.radio("Material Lantai Terluas", ["Tanah / Semen Kasar / Bambu Sederhana", "Ubin / Keramik / Marmer"], horizontal=True)
         jenis_lantai = 1 if "Keramik" in jenis_lantai_label else 0
@@ -174,7 +180,9 @@ with left_column:
         sumber_air = 1 if "PDAM" in sumber_air_label else 0
         
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        btn_click = st.button("PROSES ENGINE REKOMENDASI")
+        box_btn = st.container()
+        with box_btn:
+            btn_click = st.form_submit_button("PROSES ENGINE REKOMENDASI") if 'in_form' in locals() else st.button("PROSES ENGINE REKOMENDASI")
 
 # 7. LOGIKA ENGINE DAN VISUALISASI OUTPUT
 with right_column:
