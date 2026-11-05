@@ -1,0 +1,6 @@
+# Abaikan file video berukuran besar (>100MB)
+*.mp4
+
+# Abaikan checkpoint Jupyter dan cache Python
+.ipynb_checkpoints/
+__pycache__/
